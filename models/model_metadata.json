@@ -1,0 +1,31 @@
+{
+  "model": "logistic_regression",
+  "selection_rule": "CV ROC-AUC within 0.01, then CV recall",
+  "best_params": {
+    "model__C": "1",
+    "model__class_weight": "None"
+  },
+  "cv_roc_auc": 0.9025,
+  "test_roc_auc": 0.9665,
+  "test_recall": 0.9286,
+  "test_accuracy": 0.8852,
+  "input_features": [
+    "age",
+    "trestbps",
+    "chol",
+    "thalach",
+    "oldpeak",
+    "sex",
+    "cp",
+    "fbs",
+    "restecg",
+    "exang",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "engineered_feature": true,
+  "sklearn_version": "1.6.1",
+  "mlflow_run_id": "bbc4026fb2a046cc869f9833b785e334",
+  "trained_at_utc": "2026-10-17T04:20:49+00:00"
+}
