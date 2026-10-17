@@ -17,9 +17,9 @@ RUN pip install --upgrade pip && pip install -r requirements-api.txt
 COPY src ./src
 COPY models ./models
 
-# Run as a non-root user.
-RUN useradd --create-home appuser && chown -R appuser /app
-USER appuser
+# Run as a non-root user with a fixed numeric id (Kubernetes can only verify "non-root" for numeric ids).
+RUN useradd --uid 10001 --create-home appuser && chown -R 10001 /app
+USER 10001
 
 EXPOSE 8000
 

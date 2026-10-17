@@ -6,7 +6,7 @@ End-to-end ML project (BITS Pilani, AIMLCZG523): predict the presence of heart d
 patient health data using the UCI Heart Disease (Cleveland) dataset, then track, test, containerise,
 deploy and monitor the model.
 
-> Status: Phases 1-4 done (data, EDA, training, MLflow tracking, API, unit tests, CI pipeline, Docker). Later phases add Kubernetes and monitoring.
+> Status: Phases 1-4 done (data, EDA, training, MLflow tracking, API, unit tests, CI pipeline, Docker). Phase 5 adds Kubernetes manifests; monitoring comes next.
 
 ## Setup (Windows PowerShell)
 
@@ -77,6 +77,18 @@ user and has a health check.
 2. **docker-build-and-test**: builds the image, starts the container and smoke-tests `/health` and `/predict`.
 
 A failing lint, test, training or container step fails the pipeline and shows the log of that step.
+
+## Kubernetes (Minikube)
+
+```powershell
+minikube start --driver=docker --cpus=2 --memory=3072
+minikube image load heart-disease-api:1.0        # make the locally built image available inside the cluster
+kubectl apply -k k8s/                            # namespace + deployment (2 pods) + LoadBalancer service
+kubectl get pods,svc -n heart-mlops
+minikube tunnel                                  # separate terminal, keep running: gives the service an external IP
+```
+Then call the API on the service's EXTERNAL-IP, port 8000. Scale with
+`kubectl scale deployment heart-api -n heart-mlops --replicas=3`. Manifests are in `k8s/`.
 
 ## Tests and lint
 
