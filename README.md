@@ -6,7 +6,13 @@ End-to-end ML project (BITS Pilani, AIMLCZG523): predict the presence of heart d
 patient health data using the UCI Heart Disease (Cleveland) dataset, then track, test, containerise,
 deploy and monitor the model.
 
-> Status: Phases 1-4 done (data, EDA, training, MLflow tracking, API, unit tests, CI pipeline, Docker). Phase 5 adds Kubernetes manifests; monitoring comes next.
+> Status: complete - data + EDA, training with MLflow, FastAPI service, tests, CI/CD, Docker, Kubernetes (Minikube) and Prometheus/Grafana monitoring.
+
+![Architecture](docs/architecture.png)
+
+**Results (hold-out test set, 61 patients):** selected model = logistic regression, ROC-AUC 0.967, recall 0.929, accuracy 0.885 (5-fold CV ROC-AUC 0.902). Three models were compared; see `reports/model_comparison.csv`.
+
+**Evidence:** screenshots of every stage are in `screenshots/` (files `01_` to `11_`), including a deliberately failing pull request (`11_*`) that shows CI blocking bad code. The full written report is submitted separately.
 
 ## Setup (Windows PowerShell)
 
@@ -77,6 +83,7 @@ user and has a health check.
 2. **docker-build-and-test**: builds the image, starts the container and smoke-tests `/health` and `/predict`.
 
 A failing lint, test, training or container step fails the pipeline and shows the log of that step.
+The workflow triggers on pushes to `main` and on every pull request, so a change on a feature branch is checked as soon as a pull request is opened.
 
 ## Kubernetes (Minikube)
 
@@ -124,3 +131,15 @@ screenshots/               evidence for the report
 Hungarian Institute of Cardiology (A. Janosi), University Hospital Zurich (W. Steinbrunn),
 University Hospital Basel (M. Pfisterer), V.A. Medical Center Long Beach and Cleveland Clinic
 Foundation (R. Detrano). Donor: David W. Aha (1988).
+
+
+## Monitoring (Prometheus + Grafana on Minikube)
+
+```powershell
+kubectl apply -k monitoring/
+kubectl get pods -n monitoring
+kubectl port-forward -n monitoring svc/grafana 3000:3000        # http://localhost:3000  (admin / admin)
+kubectl port-forward -n monitoring svc/prometheus 9090:9090     # http://localhost:9090/targets
+python scripts/generate_traffic.py --requests 300 --delay 0.2   # needs `minikube tunnel` running
+kubectl logs -n heart-mlops -l app=heart-api --tail=500 | Select-String '"/predict"'
+```
