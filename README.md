@@ -12,7 +12,9 @@ deploy and monitor the model.
 
 **Results (hold-out test set, 61 patients):** selected model = logistic regression, ROC-AUC 0.967, recall 0.929, accuracy 0.885 (5-fold CV ROC-AUC 0.902). Three models were compared; see `reports/model_comparison.csv`.
 
-**Evidence:** screenshots of every stage are in `screenshots/` (files `01_` to `11_`), including a deliberately failing pull request (`11_*`) that shows CI blocking bad code. The full written report is submitted separately.
+**Evidence:** screenshots of every stage are in `screenshots/` (files `01_` to `11_`), including a deliberately failing pull request (`11_*`) that shows CI blocking bad code. A second, independent run of the whole pipeline on the BITS Prayogshala lab VM is in the same folder (files `lab_02_*` to `lab_12_*`). The full written report is submitted separately.
+
+**Demo video:** full quality on [Google Drive](https://drive.google.com/file/d/1l1NyGt8uGgFhaOEbg-KFtx0vx-AS1yjG/view?usp=drive_link) (about 115 MB), and a compressed copy (about 20 MB) in this repository: [open or download `MLOPS_Assignment1_2025AE05336.mp4`](https://github.com/vankudrv/heart-disease-mlops/raw/main/video/MLOPS_Assignment1_2025AE05336.mp4). GitHub cannot preview a video this size on the file page, so use the link above or the Raw button.
 
 ## Setup (Windows PowerShell)
 
@@ -124,7 +126,7 @@ models/                    best_model.joblib + model_metadata.json (created by t
 notebooks/01_eda.ipynb     exploratory data analysis
 reports/figures/           saved plots
 tests/, k8s/, monitoring/, .github/workflows/   added in later phases
-screenshots/               evidence for the report
+screenshots/               evidence for the report (lab_* = run on the BITS lab VM)
 ```
 
 ## Data attribution
@@ -142,4 +144,25 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000        # http://localho
 kubectl port-forward -n monitoring svc/prometheus 9090:9090     # http://localhost:9090/targets
 python scripts/generate_traffic.py --requests 300 --delay 0.2   # needs `minikube tunnel` running
 kubectl logs -n heart-mlops -l app=heart-api --tail=500 | Select-String '"/predict"'
+```
+
+## Running on the BITS lab VM (Linux, bash)
+
+The same steps were repeated on the lab VM (Rocky Linux 9.5, Python 3.12, Docker 28, Minikube 1.35).
+`kubectl` is not installed there, so a one-line wrapper around `minikube kubectl` is used, and the
+service is reached with `kubectl port-forward` instead of `minikube tunnel`. Only `~/workspace` persists
+between lab sessions, so keep the clone there.
+
+```bash
+cd ~/workspace && git clone https://github.com/vankudrv/heart-disease-mlops.git && cd heart-disease-mlops
+python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt
+python -m pytest -q && python -m flake8 src tests
+python -m src.train && git checkout -- models/        # restore the committed, version-pinned model
+docker build -t heart-disease-api:1.0 .
+mkdir -p ~/workspace/bin && printf '#!/bin/sh\nexec minikube kubectl -- "$@"\n' > ~/workspace/bin/kubectl && chmod +x ~/workspace/bin/kubectl
+export PATH=$HOME/workspace/bin:$PATH
+minikube start --driver=docker --cpus=2 --memory=4096
+minikube image load heart-disease-api:1.0 && kubectl apply -k k8s/ && kubectl apply -k monitoring/
+kubectl port-forward -n heart-mlops svc/heart-api 8000:8000 &
+python scripts/generate_traffic.py --requests 300 --delay 0.2
 ```
